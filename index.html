@@ -1,0 +1,925 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Panel de Sentimiento de Mercado</title>
+<style>
+  :root{
+    --navy-deep:#081420;
+    --navy-panel:#0E2033;
+    --navy-panel-2:#122A40;
+    --line:#24405A;
+    --brass:#C9A227;
+    --brass-light:#E7C665;
+    --brass-dim:#8A7326;
+    --parchment:#EBE4CF;
+    --parchment-dim:#9C9880;
+    --red:#B0432F;
+    --amber:#CB7C34;
+    --gold:#C9A227;
+    --sea:#7C9A5C;
+    --verdigris:#3E8272;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:
+      radial-gradient(1200px 600px at 15% -10%, #102944 0%, transparent 60%),
+      radial-gradient(1000px 700px at 110% 10%, #0d2436 0%, transparent 55%),
+      var(--navy-deep);
+    color:var(--parchment);
+    font-family: Georgia, 'Iowan Old Style', 'Palatino Linotype', serif;
+    padding: 28px 20px 60px;
+    min-height:100vh;
+  }
+  .wrap{max-width:1180px;margin:0 auto;}
+
+  /* Header */
+  header{
+    display:flex; justify-content:space-between; align-items:flex-end;
+    flex-wrap:wrap; gap:14px;
+    border-bottom:1px solid var(--line);
+    padding-bottom:18px; margin-bottom:26px;
+  }
+  .brand-eyebrow{
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    letter-spacing:.22em; text-transform:uppercase;
+    font-size:11px; color:var(--brass-light); opacity:.85; margin-bottom:6px;
+  }
+  h1{
+    margin:0; font-size:30px; font-weight:400; letter-spacing:.01em;
+    color:var(--parchment);
+  }
+  h1 em{font-style:italic; color:var(--brass-light);}
+  .updated{
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size:12px; color:var(--parchment-dim); text-align:right; line-height:1.6;
+  }
+  .updated b{color:var(--brass-light); font-weight:600;}
+
+  /* Grid */
+  .grid{
+    display:grid;
+    grid-template-columns: 1.05fr 1fr;
+    gap:22px;
+    margin-bottom:22px;
+  }
+  @media (max-width:880px){ .grid{grid-template-columns:1fr;} }
+
+  .panel{
+    background: linear-gradient(180deg, var(--navy-panel-2), var(--navy-panel));
+    border:1px solid var(--line);
+    border-radius:6px;
+    padding:22px 24px 24px;
+    position:relative;
+    box-shadow: 0 10px 30px -18px rgba(0,0,0,.6), inset 0 1px 0 rgba(255,255,255,.03);
+  }
+  .panel::before{
+    content:"";
+    position:absolute; inset:6px;
+    border:1px solid rgba(201,162,39,.14);
+    border-radius:4px;
+    pointer-events:none;
+  }
+  .panel-title{
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size:11px; letter-spacing:.16em; text-transform:uppercase;
+    color:var(--brass-light); margin:0 0 4px;
+  }
+  .panel-sub{
+    font-size:12.5px; color:var(--parchment-dim); margin:0 0 14px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  }
+
+  /* Gauge */
+  .gauge-card{display:flex; flex-direction:column; align-items:center;}
+  .gauge-readout{
+    text-align:center; margin-top:2px;
+  }
+  .gauge-value{
+    font-size:52px; line-height:1; color:var(--brass-light);
+    font-weight:400;
+  }
+  .gauge-label{
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    letter-spacing:.12em; text-transform:uppercase; font-size:13px;
+    margin-top:6px; padding:4px 12px; border-radius:20px; display:inline-block;
+  }
+  .zone-legend{
+    display:flex; justify-content:space-between; width:100%; max-width:320px;
+    margin-top:10px; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size:9.5px; color:var(--parchment-dim); letter-spacing:.02em;
+  }
+
+  /* AAII bars */
+  .aaii-bars{
+    display:flex; gap:26px; align-items:flex-end; justify-content:center;
+    height:200px; margin: 10px 0 6px; padding: 0 6px;
+  }
+  .bar-col{display:flex; flex-direction:column; align-items:center; width:74px;}
+  .bar-track{
+    position:relative; width:46px; height:160px;
+    background: repeating-linear-gradient(180deg, rgba(255,255,255,.02) 0 1px, transparent 1px 8px), #0A1C2C;
+    border:1px solid var(--line); border-radius:3px; overflow:visible;
+    display:flex; align-items:flex-end;
+  }
+  .bar-fill{
+    width:100%; border-radius:2px 2px 0 0;
+    transition: height .4s ease;
+  }
+  .bar-avg-tick{
+    position:absolute; left:-6px; right:-6px; height:2px;
+    background:var(--brass-light); opacity:.85;
+  }
+  .bar-avg-tick::after{
+    content:"prom."; position:absolute; right:-34px; top:-7px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size:8.5px; color:var(--brass-light); opacity:.85;
+  }
+  .bar-pct{
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size:18px; margin-top:10px; color:var(--parchment);
+  }
+  .bar-name{
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size:10.5px; letter-spacing:.1em; text-transform:uppercase;
+    color:var(--parchment-dim); margin-top:2px;
+  }
+
+  /* Spread trend panel */
+  .trend-panel{margin-bottom:22px;}
+  .trend-header{
+    display:flex; justify-content:space-between; align-items:baseline; flex-wrap:wrap; gap:8px;
+    margin-bottom:6px;
+  }
+  .spread-now{
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size:14px; color:var(--brass-light);
+  }
+  svg text{font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;}
+
+  /* Reading / synthesis */
+  .synthesis{
+    display:grid; grid-template-columns: 1fr 1fr; gap:22px; margin-bottom:22px;
+  }
+  @media (max-width:880px){ .synthesis{grid-template-columns:1fr;} }
+  .read-line{
+    display:flex; gap:12px; align-items:flex-start; margin-bottom:12px;
+  }
+  .dot{width:9px; height:9px; border-radius:50%; margin-top:6px; flex:none;}
+  .read-line p{margin:0; font-size:14px; line-height:1.55; color:var(--parchment);}
+  .read-line span.hl{color:var(--brass-light); font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size:13px;}
+
+  /* Links */
+  .sources{
+    display:grid; grid-template-columns: repeat(4, 1fr); gap:14px; margin-bottom:22px;
+  }
+  @media (max-width:880px){ .sources{grid-template-columns: repeat(2,1fr);} }
+  .source-card{
+    background:var(--navy-panel); border:1px solid var(--line); border-radius:6px;
+    padding:14px 16px; text-decoration:none; display:block;
+    transition: border-color .2s ease, transform .2s ease;
+  }
+  .source-card:hover{border-color:var(--brass-dim); transform:translateY(-2px);}
+  .source-name{color:var(--brass-light); font-size:13.5px; margin:0 0 4px; font-weight:600;}
+  .source-desc{color:var(--parchment-dim); font-size:11.5px; margin:0; line-height:1.4;}
+
+  /* Footer note */
+  footer{
+    border-top:1px solid var(--line); padding-top:16px; margin-top:8px;
+  }
+  details{color:var(--parchment-dim); font-size:12.5px; line-height:1.6;}
+  summary{cursor:pointer; color:var(--brass-light); font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size:11.5px; letter-spacing:.08em; text-transform:uppercase;}
+  code{background:#0A1C2C; padding:1px 5px; border-radius:3px; color:var(--brass-light); font-size:11.5px;}
+  .foot-note{font-size:11.5px; color:var(--parchment-dim); margin-top:10px;}
+
+  /* Extended instrument grid */
+  .section-label{
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size:11px; letter-spacing:.18em; text-transform:uppercase;
+    color:var(--brass-light); margin: 4px 0 12px; opacity:.9;
+  }
+  .mini-grid{
+    display:grid; grid-template-columns: repeat(4, 1fr); gap:16px; margin-bottom:22px;
+  }
+  @media (max-width:960px){ .mini-grid{grid-template-columns: repeat(2,1fr);} }
+  @media (max-width:520px){ .mini-grid{grid-template-columns: 1fr;} }
+  .mini-card{
+    background: linear-gradient(180deg, var(--navy-panel-2), var(--navy-panel));
+    border:1px solid var(--line); border-radius:6px;
+    padding:14px 14px 12px; display:flex; flex-direction:column; align-items:center;
+    position:relative;
+  }
+  .mini-card::before{
+    content:""; position:absolute; inset:5px; border:1px solid rgba(201,162,39,.10);
+    border-radius:4px; pointer-events:none;
+  }
+  .mini-title{
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size:10px; letter-spacing:.08em; text-transform:uppercase;
+    color:var(--parchment-dim); text-align:center; margin-bottom:2px; min-height:24px;
+  }
+  .mini-value{font-size:26px; color:var(--parchment); margin-top:2px;}
+  .mini-label{
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size:10px; letter-spacing:.08em; text-transform:uppercase;
+    padding:2px 9px; border-radius:14px; margin-top:5px;
+  }
+  .mini-date{
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size:9px; color:var(--parchment-dim); opacity:.7; margin-top:8px;
+  }
+  .twobar-wrap{display:flex; gap:18px; align-items:flex-end; height:120px; margin:8px 0;}
+  .twobar-col{display:flex; flex-direction:column; align-items:center; width:52px;}
+  .twobar-track{width:34px; height:96px; background:#0A1C2C; border:1px solid var(--line); border-radius:3px; display:flex; align-items:flex-end; position:relative;}
+  .twobar-fill{width:100%; border-radius:2px 2px 0 0;}
+  .twobar-pct{font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size:14px; margin-top:6px;}
+  .twobar-name{font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size:9px; color:var(--parchment-dim); text-transform:uppercase;}
+
+  /* Composite speedometer */
+  .composite-card{
+    display:flex; flex-wrap:wrap; gap:28px; align-items:center;
+    justify-content:space-between; margin-bottom:24px;
+  }
+  .composite-left{flex:none; display:flex; flex-direction:column; align-items:center; min-width:340px;}
+  .composite-digital{
+    background:#07131F; border:1px solid var(--line); border-radius:5px;
+    padding:8px 22px; margin-top:2px; text-align:center;
+    box-shadow: inset 0 2px 6px rgba(0,0,0,.5);
+  }
+  .composite-digital .num{
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size:36px; color:var(--brass-light); letter-spacing:.03em;
+  }
+  .composite-digital .lbl{
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size:11px; letter-spacing:.14em; text-transform:uppercase; margin-top:2px;
+  }
+  .composite-verdict{
+    max-width:320px; text-align:center; font-size:12.5px; color:var(--parchment-dim);
+    margin-top:12px; line-height:1.55;
+  }
+  .composite-right{flex:1; min-width:280px;}
+  .breakdown-row{
+    display:grid; grid-template-columns: 1fr auto 120px 46px; gap:10px; align-items:center;
+    padding:6px 0; border-bottom:1px solid rgba(36,64,90,.5);
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size:11.5px;
+  }
+  .breakdown-row:last-child{border-bottom:none;}
+  .breakdown-name{color:var(--parchment);}
+  .breakdown-weight{color:var(--parchment-dim); font-size:10.5px; white-space:nowrap;}
+  .breakdown-bar-track{
+    width:120px; height:7px; background:#0A1C2C; border-radius:4px; overflow:hidden;
+    border:1px solid var(--line);
+  }
+  .breakdown-bar-fill{height:100%; border-radius:4px;}
+  .breakdown-score{color:var(--parchment-dim); text-align:right;}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div>
+      <div class="brand-eyebrow">Instrumental de a bordo · Sentimiento de mercado</div>
+      <h1>Barómetro de <em>Miedo &amp; Codicia</em></h1>
+    </div>
+    <div class="updated" id="updatedBox"></div>
+  </header>
+
+  <!-- COMPOSITE SPEEDOMETER -->
+  <div class="panel composite-card">
+    <div class="composite-left">
+      <p class="panel-title" style="align-self:flex-start;">Índice de Sentimiento Agregado (ISA)</p>
+      <p class="panel-sub" style="align-self:flex-start;">media ponderada de los 9 indicadores del panel</p>
+      <svg id="compositeSvg" viewBox="0 0 360 210" width="360" height="210"></svg>
+      <div class="composite-digital">
+        <div class="num" id="compositeValue">--</div>
+        <div class="lbl" id="compositeLabel">--</div>
+      </div>
+      <p class="composite-verdict" id="compositeVerdict"></p>
+    </div>
+    <div class="composite-right">
+      <p class="panel-title">Desglose y ponderación</p>
+      <div id="compositeBreakdown"></div>
+    </div>
+  </div>
+
+  <div class="grid">
+    <!-- CNN FEAR & GREED GAUGE -->
+    <div class="panel gauge-card">
+      <p class="panel-title">CNN Fear &amp; Greed Index</p>
+      <p class="panel-sub">edition.cnn.com/markets/fear-and-greed</p>
+      <svg id="gaugeSvg" viewBox="0 0 300 175" width="320" height="185">
+        <!-- zone arcs -->
+        <path d="M 40,150 A 110,110 0 0,1 61.01,85.34"  stroke="#A63A2E" stroke-width="16" fill="none" stroke-linecap="round"/>
+        <path d="M 61.01,85.34 A 110,110 0 0,1 116.01,45.38" stroke="#C97A3A" stroke-width="16" fill="none" stroke-linecap="round"/>
+        <path d="M 116.01,45.38 A 110,110 0 0,1 183.99,45.38" stroke="#C9A227" stroke-width="16" fill="none" stroke-linecap="round"/>
+        <path d="M 183.99,45.38 A 110,110 0 0,1 238.99,85.34" stroke="#7C9A5C" stroke-width="16" fill="none" stroke-linecap="round"/>
+        <path d="M 238.99,85.34 A 110,110 0 0,1 260,150" stroke="#3E8272" stroke-width="16" fill="none" stroke-linecap="round"/>
+        <!-- ticks -->
+        <circle cx="150" cy="150" r="4" fill="var(--brass)" stroke="#0A1C2C" stroke-width="1"/>
+        <g id="needleGroup" transform="rotate(0 150 150)">
+          <line x1="150" y1="150" x2="150" y2="52" stroke="#EBE4CF" stroke-width="3" stroke-linecap="round"/>
+          <line x1="150" y1="150" x2="150" y2="52" stroke="#C9A227" stroke-width="1" stroke-linecap="round"/>
+        </g>
+        <circle cx="150" cy="150" r="7" fill="#0E2033" stroke="var(--brass)" stroke-width="2"/>
+      </svg>
+      <div class="gauge-readout">
+        <div class="gauge-value" id="fgValue">--</div>
+        <div class="gauge-label" id="fgLabel">--</div>
+      </div>
+      <div class="zone-legend">
+        <span>Miedo extremo</span><span>Miedo</span><span>Neutral</span><span>Codicia</span><span>Codicia extrema</span>
+      </div>
+    </div>
+
+    <!-- AAII PANEL -->
+    <div class="panel">
+      <p class="panel-title">AAII Investor Sentiment Survey</p>
+      <p class="panel-sub">aaii.com/sentimentsurvey · encuesta semanal, cierra los miércoles</p>
+      <div class="aaii-bars" id="aaiiBars"></div>
+      <div style="text-align:center; margin-top:6px; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size:12px; color:var(--parchment-dim);">
+        línea clara = media histórica de cada categoría
+      </div>
+    </div>
+  </div>
+
+  <!-- SPREAD TREND -->
+  <div class="panel trend-panel">
+    <div class="trend-header">
+      <div>
+        <p class="panel-title" style="margin-bottom:2px;">Bull-Bear Spread (AAII) · últimas 7 lecturas</p>
+        <p class="panel-sub" style="margin-bottom:0;">bullish % − bearish % · media histórica ≈ +6.5%</p>
+      </div>
+      <div class="spread-now" id="spreadNow"></div>
+    </div>
+    <svg id="trendSvg" viewBox="0 0 700 190" width="100%" height="190"></svg>
+  </div>
+
+  <!-- EXTENDED INSTRUMENTS -->
+  <p class="section-label">Panel ampliado · posicionamiento, volatilidad y macro</p>
+  <div class="mini-grid" id="miniGrid"></div>
+
+  <div class="mini-grid" style="grid-template-columns: 1fr 1fr;" id="pairGrid"></div>
+
+  <!-- SYNTHESIS -->
+  <div class="synthesis">
+    <div class="panel">
+      <p class="panel-title">Lectura combinada</p>
+      <div id="synthesisLines"></div>
+    </div>
+    <div class="panel">
+      <p class="panel-title">MacroMicro · AAII Net Bullish &amp; Global Sentiment</p>
+      <p class="panel-sub">en.macromicro.me · colección de indicadores globales</p>
+      <p style="font-size:13px; line-height:1.6; color:var(--parchment);">
+        MacroMicro replica esta misma serie de AAII (bull-bear spread) junto con el Fear &amp; Greed de CNN
+        dentro de su colección <em>Global Sentiment Indicator</em>, y añade lecturas de posicionamiento
+        institucional (put/call, VIX term structure, flujos ETF) que no están disponibles públicamente
+        para incrustar aquí. Es el mejor sitio para cruzar AAII contra sentimiento institucional en una sola vista.
+      </p>
+      <a href="https://en.macromicro.me/collections/20868/global-sentiment-indicator" target="_blank" style="color:var(--brass-light); font-size:12.5px; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;">→ abrir colección completa en MacroMicro</a>
+    </div>
+  </div>
+
+  <!-- SOURCE LINKS -->
+  <p class="panel-title" style="margin-bottom:10px;">Fuentes de referencia</p>
+  <div class="sources">
+    <a class="source-card" href="https://www.aaii.com/sentimentsurvey" target="_blank">
+      <p class="source-name">AAII Sentiment Survey</p>
+      <p class="source-desc">Encuesta semanal a inversores particulares. Gratuita, se publica los jueves.</p>
+    </a>
+    <a class="source-card" href="https://sentimentrader.com/" target="_blank">
+      <p class="source-name">SentimenTrader</p>
+      <p class="source-desc">Decenas de indicadores propietarios (smart/dumb money). Mayormente de pago — no permite scraping ni embebido.</p>
+    </a>
+    <a class="source-card" href="https://edition.cnn.com/markets/fear-and-greed" target="_blank">
+      <p class="source-name">CNN Fear &amp; Greed</p>
+      <p class="source-desc">7 componentes de mercado agregados en un índice 0-100. Se actualiza en vivo durante la sesión de EE.UU.</p>
+    </a>
+    <a class="source-card" href="https://en.macromicro.me/collections/20868/global-sentiment-indicator/98895/aaii-sentiment-survey-net-bullish" target="_blank">
+      <p class="source-name">MacroMicro · Net Bullish</p>
+      <p class="source-desc">Mismo dato de AAII con capas adicionales de contexto macro e institucional.</p>
+    </a>
+  </div>
+
+  <footer>
+    <details>
+      <summary>¿Cómo funciona la actualización de este panel?</summary>
+      <p style="margin-top:10px;">
+        Cada jueves a las 22:00 UTC, un job de GitHub Actions ejecuta <code>scripts/fetch_sentiment.py</code>,
+        que captura 5 de los 8 indicadores (VIX, CNN Fear &amp; Greed, AAII, Put/Call de Cboe y % de S&amp;P500
+        sobre su media de 200 sesiones) y los escribe en <code>data/sentiment.json</code>. Este panel HTML
+        lee ese archivo al cargar — por eso no hace falta tocar nada para que estén al día.
+      </p>
+      <p style="margin-top:8px;">
+        Los otros 3 (<b>NAAIM</b>, <b>Insider Buy/Sell Ratio</b>, <b>Smart/Dumb Money</b>) son de fuentes de pago
+        sin API pública, así que el script nunca los toca. Para actualizarlos: edita directamente
+        <code>data/sentiment.json</code> en GitHub (botón del lápiz, sin necesidad de clonar nada),
+        cambia el <code>value</code>/<code>smart</code>/<code>dumb</code> y la fecha <code>manual_updated</code>,
+        y haz commit. La próxima ejecución automática respeta esos campos tal cual los dejaste.
+      </p>
+      <p style="margin-top:8px;">
+        Si <code>data/sentiment.json</code> no se puede leer (por ejemplo, si abres este archivo con doble clic
+        en vez de vía GitHub Pages), el panel cae automáticamente en el último snapshot embebido en el
+        propio HTML, para que nunca se rompa.
+      </p>
+      <p style="margin-top:10px;">
+        Lanzar la captura a mano en cualquier momento: pestaña <b>Actions</b> del repo →
+        <em>Captura semanal de sentimiento</em> → <b>Run workflow</b>.
+      </p>
+    </details>
+    <details style="margin-top:10px;">
+      <summary>¿Cómo se calcula el Índice de Sentimiento Agregado (ISA)?</summary>
+      <p style="margin-top:10px;">
+        Cada uno de los 9 indicadores se normaliza primero a una escala 0-100 donde 100 siempre significa
+        "más codicia/optimismo" (el VIX y el Put/Call se invierten, porque en ellos un valor bajo es
+        la lectura optimista). Luego se pondera: F&amp;G 20%, % S&amp;P500&gt;200d 15%, AAII 15%, VIX 10%,
+        Put/Call 10%, NAAIM 10%, Insider Ratio 10%, Dumb Money 5%, prob. recorte Fed 5%. La media ponderada
+        es el número que ves en el velocímetro.
+      </p>
+      <p style="margin-top:8px;">
+        Los pesos están en <code>COMPOSITE_CONFIG</code>, al principio del <code>&lt;script&gt;</code> de
+        <code>index.html</code> — si quieres darle más o menos peso a algún indicador, es ese único array
+        el que hay que tocar, todo lo demás (gauge, desglose, colores) se recalcula solo.
+      </p>
+    </details>
+    <p class="foot-note">
+      Cada tarjeta lleva su propia fecha porque estas fuentes no publican con la misma cadencia:
+      VIX y CNN se mueven a diario, AAII es semanal, Put/Call y breadth rondan la semana, e insiders
+      y Smart/Dumb Money se agregan por quincena o mes. No mezcles estas fechas como si fueran "hoy".
+      No es asesoramiento de inversión.
+    </p>
+  </footer>
+
+</div>
+
+<script>
+// DEFAULTS = último snapshot conocido, embebido en el propio HTML.
+// Si data/sentiment.json no carga (por ejemplo al abrir el archivo con
+// doble clic en vez de servirlo por http/GitHub Pages), el panel sigue
+// funcionando con estos valores en vez de romperse.
+const DEFAULTS = {
+  fearGreed: { value: 65, label: "Codicia (Greed)", date: "2026-08-14", zoneColor: "#7C9A5C" },
+  aaii: {
+    bullish: 34.7, neutral: 27.4, bearish: 37.9,
+    avgBullish: 37.5, avgNeutral: 31.5, avgBearish: 31.0,
+    spread: -3.2, avgSpread: 6.5, date: "2026-08-13",
+    history: [
+      { date: "02 jul", spread: -10.9 },
+      { date: "09 jul", spread: -0.9 },
+      { date: "16 jul", spread: 12.0 },
+      { date: "23 jul", spread: -12.7 },
+      { date: "30 jul", spread: -11.1 },
+      { date: "06 ago", spread: -1.0 },
+      { date: "13 ago", spread: -3.2 }
+    ]
+  },
+  extra: {
+    vix: { value: 14.25, date: "17 ago 2026", source: "Cboe", auto: true },
+    putCall: { value: 0.54, date: "07 ago 2026", source: "CBOE Equity P/C, vía MacroMicro", auto: false },
+    naaim: { value: 79.70, prev: 84.02, date: "sem. 29 jul 2026", source: "NAAIM Exposure Index", auto: true },
+    insiderRatio: { value: 0.23, avg: 0.39, date: "jul 2026", source: "GuruFocus, ratio compras/ventas", auto: false },
+    pct200dma: { value: 56.8, date: "07 ago 2026", source: "~4.750 acciones EE.UU., thetrading.tools", auto: true },
+    smartDumb: { smart: 30, dumb: 61, date: "16 jul 2026", source: "SentimenTrader", auto: false },
+    fedCut: { cut: 31, hold: 69, meetingDate: "16 sep 2026", date: "14 ago 2026", source: "CME FedWatch", auto: false }
+  }
+};
+
+let DATA = DEFAULTS;
+let USING_LIVE_DATA = false;
+
+function deepMerge(base, incoming){
+  if(incoming === undefined || incoming === null) return base;
+  if(Array.isArray(incoming)) return incoming;
+  if(typeof incoming !== "object") return incoming;
+  const out = {...base};
+  for(const k in incoming){
+    out[k] = (typeof base?.[k] === "object" && base[k] !== null && !Array.isArray(base[k]))
+      ? deepMerge(base[k], incoming[k])
+      : incoming[k];
+  }
+  return out;
+}
+
+// ---- Header timestamp ----
+function fmtDate(iso){
+  if(!iso) return "--";
+  const d = new Date(iso + "T00:00:00");
+  if(isNaN(d)) return iso;
+  return d.toLocaleDateString('es-ES', { day:'2-digit', month:'short', year:'numeric' });
+}
+function drawHeader(){
+  const liveNote = USING_LIVE_DATA
+    ? `<br><span style="opacity:.8;">fuente: data/sentiment.json (actualizado por GitHub Actions)</span>`
+    : `<br><span style="opacity:.8;">⚠ no se pudo leer data/sentiment.json — mostrando último snapshot embebido</span>`;
+  document.getElementById('updatedBox').innerHTML =
+    `Fear &amp; Greed actualizado: <b>${fmtDate(DATA.fearGreed.date)}</b><br>AAII semana cerrada: <b>${fmtDate(DATA.aaii.date)}</b>${liveNote}`;
+}
+
+// ---- Gauge ----
+function fgZoneLabel(v){
+  if(v<25) return {label:"Miedo extremo", color:"#B0432F"};
+  if(v<45) return {label:"Miedo", color:"#CB7C34"};
+  if(v<55) return {label:"Neutral", color:"#C9A227"};
+  if(v<75) return {label:"Codicia", color:"#7C9A5C"};
+  return {label:"Codicia extrema", color:"#3E8272"};
+}
+function drawGauge(){
+  const v = DATA.fearGreed.value;
+  const deg = (v-50)*1.8;
+  document.getElementById('needleGroup').setAttribute('transform', `rotate(${deg} 150 150)`);
+  document.getElementById('fgValue').textContent = v;
+  const z = fgZoneLabel(v);
+  const labelEl = document.getElementById('fgLabel');
+  labelEl.textContent = z.label;
+  labelEl.style.background = z.color + "26";
+  labelEl.style.color = z.color;
+  labelEl.style.border = `1px solid ${z.color}66`;
+}
+
+// ---- AAII bars ----
+function drawBars(){
+  const a = DATA.aaii;
+  const items = [
+    {name:"Alcista", val:a.bullish, avg:a.avgBullish, color:"#7C9A5C"},
+    {name:"Neutral", val:a.neutral, avg:a.avgNeutral, color:"#C9A227"},
+    {name:"Bajista", val:a.bearish, avg:a.avgBearish, color:"#B0432F"}
+  ];
+  const maxScale = 50; // percent scale for bar height
+  const track = 160;
+  const container = document.getElementById('aaiiBars');
+  container.innerHTML = items.map(it=>{
+    const h = Math.min(100, (it.val/maxScale)*100);
+    const avgFromBottom = Math.min(100, (it.avg/maxScale)*100);
+    return `
+      <div class="bar-col">
+        <div class="bar-track">
+          <div class="bar-avg-tick" style="bottom:${avgFromBottom}%;"></div>
+          <div class="bar-fill" style="height:${h}%; background:linear-gradient(180deg, ${it.color}, ${it.color}CC);"></div>
+        </div>
+        <div class="bar-pct">${it.val.toFixed(1)}%</div>
+        <div class="bar-name">${it.name}</div>
+      </div>`;
+  }).join("");
+}
+
+// ---- Trend chart ----
+function drawTrend(){
+  const hist = DATA.aaii.history;
+  const avg = DATA.aaii.avgSpread;
+  const W=700,H=190, padL=36,padR=20,padT=18,padB=28;
+  const plotW = W-padL-padR, plotH = H-padT-padB;
+  const yMin=-20,yMax=20;
+  const xFor = i => padL + (i/(hist.length-1))*plotW;
+  const yFor = v => padT + (1-(v-yMin)/(yMax-yMin))*plotH;
+
+  let svg = "";
+  // zero line
+  svg += `<line x1="${padL}" y1="${yFor(0)}" x2="${W-padR}" y2="${yFor(0)}" stroke="#3A5670" stroke-width="1"/>`;
+  // avg dashed line
+  svg += `<line x1="${padL}" y1="${yFor(avg)}" x2="${W-padR}" y2="${yFor(avg)}" stroke="#C9A227" stroke-width="1" stroke-dasharray="4 4" opacity=".7"/>`;
+  svg += `<text x="${W-padR}" y="${yFor(avg)-6}" text-anchor="end" font-size="10" fill="#C9A227">media ${avg}%</text>`;
+
+  // area fill
+  let areaPts = hist.map((d,i)=>`${xFor(i)},${yFor(d.spread)}`).join(" L ");
+  svg += `<path d="M ${xFor(0)},${yFor(0)} L ${areaPts} L ${xFor(hist.length-1)},${yFor(0)} Z" fill="#C9A22712"/>`;
+
+  // line
+  let linePts = hist.map((d,i)=>`${xFor(i)},${yFor(d.spread)}`).join(" L ");
+  svg += `<path d="M ${linePts}" fill="none" stroke="#E7C665" stroke-width="2"/>`;
+
+  // points + labels
+  hist.forEach((d,i)=>{
+    const x=xFor(i), y=yFor(d.spread);
+    const color = d.spread>=0 ? "#7C9A5C" : "#B0432F";
+    svg += `<circle cx="${x}" cy="${y}" r="4" fill="${color}" stroke="#0E2033" stroke-width="1.5"/>`;
+    svg += `<text x="${x}" y="${H-8}" text-anchor="middle" font-size="10" fill="#9C9880">${d.date}</text>`;
+    svg += `<text x="${x}" y="${y-10}" text-anchor="middle" font-size="10" fill="#EBE4CF">${d.spread>0?'+':''}${d.spread.toFixed(1)}</text>`;
+  });
+
+  document.getElementById('trendSvg').innerHTML = svg;
+  const last = hist[hist.length-1].spread;
+  document.getElementById('spreadNow').textContent = `actual: ${last>0?'+':''}${last.toFixed(1)}%`;
+}
+
+// ---- Generic gauge geometry helpers ----
+function polarPoint(cx,cy,r,angleDeg){
+  const rad = angleDeg*Math.PI/180;
+  return { x: cx + r*Math.cos(rad), y: cy - r*Math.sin(rad) };
+}
+function arcPath(cx,cy,r,startDeg,endDeg){
+  const p1 = polarPoint(cx,cy,r,startDeg);
+  const p2 = polarPoint(cx,cy,r,endDeg);
+  return `M ${p1.x.toFixed(2)},${p1.y.toFixed(2)} A ${r},${r} 0 0,1 ${p2.x.toFixed(2)},${p2.y.toFixed(2)}`;
+}
+function buildMiniGauge(cx,cy,r,strokeW,zoneColors,value,min,max,decimals,valueColorOverride){
+  const t = Math.max(0, Math.min(1, (value-min)/(max-min)));
+  let svg = "";
+  for(let i=0;i<5;i++){
+    const startDeg = 180 - i*36;
+    const endDeg = 180 - (i+1)*36;
+    svg += `<path d="${arcPath(cx,cy,r,startDeg,endDeg)}" stroke="${zoneColors[i]}" stroke-width="${strokeW}" fill="none" stroke-linecap="round"/>`;
+  }
+  const deg = (t-0.5)*180;
+  const needleLen = r-14;
+  svg += `<g transform="rotate(${deg} ${cx} ${cy})">
+    <line x1="${cx}" y1="${cy}" x2="${cx}" y2="${cy-needleLen}" stroke="#EBE4CF" stroke-width="2.4" stroke-linecap="round"/>
+  </g>`;
+  svg += `<circle cx="${cx}" cy="${cy}" r="5" fill="#0E2033" stroke="var(--brass)" stroke-width="1.6"/>`;
+  const zoneIdx = Math.min(4, Math.floor(t*5));
+  return { svg, zoneColor: zoneColors[zoneIdx] };
+}
+function miniCard({title, value, unit, min, max, decimals, zoneColors, zoneLabels, dateStr, sourceNote}){
+  const t = Math.max(0, Math.min(1, (value-min)/(max-min)));
+  const zoneIdx = Math.min(4, Math.floor(t*5));
+  const color = zoneColors[zoneIdx];
+  const label = zoneLabels[zoneIdx];
+  const g = buildMiniGauge(75,80,58,10,zoneColors,value,min,max,decimals);
+  return `
+    <div class="mini-card">
+      <p class="mini-title">${title}</p>
+      <svg viewBox="0 0 150 92" width="150" height="92">${g.svg}</svg>
+      <div class="mini-value" style="color:${color};">${value.toFixed(decimals)}${unit||''}</div>
+      <div class="mini-label" style="background:${color}26; color:${color}; border:1px solid ${color}66;">${label}</div>
+      <div class="mini-date">${sourceNote} · ${dateStr}</div>
+    </div>`;
+}
+
+// ---- Render extended instrument grid ----
+function drawExtended(){
+  const e = DATA.extra;
+  const grid = document.getElementById('miniGrid');
+  const zc = ["#3E8272","#7C9A5C","#C9A227","#C97A3A","#B0432F"]; // green->red (low value = calm)
+  const zcInv = ["#B0432F","#C97A3A","#C9A227","#7C9A5C","#3E8272"]; // red->green (low value = defensive)
+
+  grid.innerHTML =
+    miniCard({
+      title:"VIX", value:e.vix.value, unit:"", min:9, max:40, decimals:2,
+      zoneColors: zc,
+      zoneLabels:["Complacencia","Calma","Normal","Cautela","Miedo"],
+      dateStr:fmtDate(e.vix.date), sourceNote:e.vix.source
+    }) +
+    miniCard({
+      title:"Put/Call Ratio (equity)", value:e.putCall.value, unit:"", min:0.4, max:1.2, decimals:2,
+      zoneColors: zc,
+      zoneLabels:["Complacencia","Calma","Normal","Cautela","Miedo"],
+      dateStr:fmtDate(e.putCall.date), sourceNote:e.putCall.source
+    }) +
+    miniCard({
+      title:"NAAIM Exposure Index", value:e.naaim.value, unit:"", min:-20, max:140, decimals:1,
+      zoneColors: zcInv,
+      zoneLabels:["Defensivo","Cauteloso","Neutral","Alcista","Extremo"],
+      dateStr:fmtDate(e.naaim.date) + (e.naaim.manual ? " · manual" : ""), sourceNote:e.naaim.source
+    }) +
+    miniCard({
+      title:"Insider Buy/Sell Ratio", value:e.insiderRatio.value, unit:"", min:0.1, max:0.7, decimals:2,
+      zoneColors: zcInv,
+      zoneLabels:["Ventas fuertes","Cautela","Neutral","Compras","Compras fuertes"],
+      dateStr:fmtDate(e.insiderRatio.date) + (e.insiderRatio.manual ? " · manual" : ""), sourceNote:e.insiderRatio.source
+    }) +
+    miniCard({
+      title:"% S&P 500 &gt; media 200d", value:e.pct200dma.value, unit:"%", min:0, max:100, decimals:1,
+      zoneColors: zcInv,
+      zoneLabels:["Pánico","Débil","Neutral","Alcista","Sobrecalentado"],
+      dateStr:fmtDate(e.pct200dma.date), sourceNote:e.pct200dma.source
+    });
+
+  // Pair grid: Smart/Dumb money + Fed cut probability
+  const pairGrid = document.getElementById('pairGrid');
+  const smartColor = "#3E8272", dumbColor = "#C97A3A";
+  const smartDumbCard = `
+    <div class="panel">
+      <p class="panel-title">Smart Money / Dumb Money Confidence</p>
+      <p class="panel-sub">${e.smartDumb.source} · ${fmtDate(e.smartDumb.date)}${e.smartDumb.manual ? " · manual" : ""}</p>
+      <div class="twobar-wrap" style="justify-content:center;">
+        <div class="twobar-col">
+          <div class="twobar-track"><div class="twobar-fill" style="height:${e.smartDumb.smart}%; background:${smartColor};"></div></div>
+          <div class="twobar-pct" style="color:${smartColor};">${e.smartDumb.smart}%</div>
+          <div class="twobar-name">Smart Money</div>
+        </div>
+        <div class="twobar-col">
+          <div class="twobar-track"><div class="twobar-fill" style="height:${e.smartDumb.dumb}%; background:${dumbColor};"></div></div>
+          <div class="twobar-pct" style="color:${dumbColor};">${e.smartDumb.dumb}%</div>
+          <div class="twobar-name">Dumb Money</div>
+        </div>
+      </div>
+      <p style="font-size:12px; color:var(--parchment-dim); text-align:center; margin-top:6px;">
+        Dumb Money por encima de Smart Money → sentimiento de manos débiles optimista, contrarian bajista si el spread se dispara.
+      </p>
+    </div>`;
+
+  const cutDeg = (e.fedCut.cut/100)*360;
+  const fedCard = `
+    <div class="panel" style="display:flex; flex-direction:column; align-items:center;">
+      <p class="panel-title">Probabilidad recorte Fed · reunión ${e.fedCut.meetingDate}</p>
+      <p class="panel-sub">${e.fedCut.source} · ${fmtDate(e.fedCut.date)}${e.fedCut.manual ? " · manual" : ""}</p>
+      <svg viewBox="0 0 200 200" width="160" height="160">
+        <circle cx="100" cy="100" r="72" fill="none" stroke="#132C44" stroke-width="26"/>
+        <circle cx="100" cy="100" r="72" fill="none" stroke="#C9A227" stroke-width="26"
+          stroke-dasharray="${(cutDeg/360)*452.4} 452.4" stroke-dashoffset="113.1" transform="rotate(-90 100 100)" stroke-linecap="butt"/>
+        <text x="100" y="94" text-anchor="middle" font-size="30" fill="#EBE4CF">${e.fedCut.cut}%</text>
+        <text x="100" y="118" text-anchor="middle" font-size="11" fill="#9C9880">recorte</text>
+      </svg>
+      <p style="font-size:12px; color:var(--parchment-dim); text-align:center; margin-top:2px;">
+        ${e.fedCut.hold}% mantener tipos · implícito en Fed Funds futures (CME)
+      </p>
+    </div>`;
+
+  pairGrid.innerHTML = smartDumbCard + fedCard;
+}
+
+// ---- Synthesis text ----
+function drawSynthesis(){
+  const fg = DATA.fearGreed.value;
+  const spread = DATA.aaii.spread;
+  const e = DATA.extra;
+  const composite = computeComposite(DATA);
+  const lines = [];
+
+  lines.push({
+    color: compositeZone(composite.score).color,
+    html:`El <span class="hl">Índice de Sentimiento Agregado marca ${composite.score.toFixed(1)}/100</span>
+          (${compositeZone(composite.score).label.toLowerCase()}) — más moderado que el F&amp;G de CNN en solitario
+          (${fg}), precisamente porque pondera también la cautela de AAII, insiders y Smart Money.`
+  });
+  lines.push({
+    color:"#7C9A5C",
+    html:`El mercado (precio, volatilidad, breadth) está en <span class="hl">${DATA.fearGreed.label}</span>.
+          Lo confirman el VIX en <span class="hl">${e.vix.value}</span> (zona de calma) y el put/call de equity en
+          <span class="hl">${e.putCall.value}</span> — poca cobertura comprada, típico de fases de complacencia.`
+  });
+  lines.push({
+    color:"#7C9A5C",
+    html:`La amplitud acompaña: <span class="hl">${e.pct200dma.value}%</span> de las acciones de EE.UU. cotizan por
+          encima de su media de 200 sesiones — el rally no depende de un puñado de valores.`
+  });
+  lines.push({
+    color: spread<0 ? "#B0432F" : "#7C9A5C",
+    html:`El inversor particular (AAII), en cambio, sigue con spread <span class="hl">${spread>0?'+':''}${spread.toFixed(1)}%</span>,
+          por debajo de su media histórica (+6.5%) — más cautela declarada de la que sugiere la acción del precio.`
+  });
+  lines.push({
+    color:"#B0432F",
+    html:`Dos señales de "dinero informado" apuntan en la misma dirección cauta que AAII: los insiders venden a un
+          ritmo históricamente alto (ratio compra/venta <span class="hl">${e.insiderRatio.value}</span>, muy por debajo
+          de su media de 0.39) y el Smart Money de SentimenTrader está en <span class="hl">${e.smartDumb.smart}%</span>
+          frente a un Dumb Money en <span class="hl">${e.smartDumb.dumb}%</span> — divergencia clásica de fin de ciclo alcista.`
+  });
+  lines.push({
+    color:"#C9A227",
+    html:`Los gestores activos (NAAIM) están en una exposición moderada de <span class="hl">${e.naaim.value}</span>,
+          ni a la defensiva ni apalancados — y el mercado de tipos apenas asigna un
+          <span class="hl">${e.fedCut.cut}%</span> a un recorte de la Fed en la reunión del ${e.fedCut.meetingDate},
+          así que no hay un catalizador monetario inminente ya descontado.`
+  });
+  lines.push({
+    color:"#C9A227",
+    html:`En conjunto: los indicadores de precio y posicionamiento agregado (F&amp;G, VIX, put/call, breadth) están en
+          codicia/calma, mientras que los indicadores de "convicción" (AAII, insiders, smart money) están cautos.
+          Es la típica foto de un rally maduro que sube "escalando el muro de la preocupación" — ninguna lectura
+          individual está en extremo accionable todavía, pero la divergencia merece vigilancia.`
+  });
+
+  document.getElementById('synthesisLines').innerHTML = lines.map(l=>`
+    <div class="read-line">
+      <div class="dot" style="background:${l.color};"></div>
+      <p>${l.html}</p>
+    </div>`).join("");
+}
+
+// ---- Composite Sentiment Index (ISA) ----
+function clamp(v,a,b){ return Math.max(a, Math.min(b, v)); }
+
+const COMPOSITE_CONFIG = [
+  { key:"fg", label:"CNN Fear & Greed", weight:20, unit:"",
+    raw:d=>d.fearGreed.value, norm:v=>clamp(v,0,100) },
+  { key:"breadth", label:"% S&P500 > media 200d", weight:15, unit:"%",
+    raw:d=>d.extra.pct200dma.value, norm:v=>clamp(v,0,100) },
+  { key:"aaii", label:"AAII Bull-Bear Spread", weight:15, unit:"%",
+    raw:d=>d.aaii.spread, norm:v=>clamp((v+20)/40*100,0,100) },
+  { key:"vix", label:"VIX (invertido)", weight:10, unit:"",
+    raw:d=>d.extra.vix.value, norm:v=>clamp(100-((v-9)/(40-9))*100,0,100) },
+  { key:"putcall", label:"Put/Call Ratio (invertido)", weight:10, unit:"",
+    raw:d=>d.extra.putCall.value, norm:v=>clamp(100-((v-0.4)/(1.2-0.4))*100,0,100) },
+  { key:"naaim", label:"NAAIM Exposure", weight:10, unit:"",
+    raw:d=>d.extra.naaim.value, norm:v=>clamp((v+20)/160*100,0,100) },
+  { key:"insider", label:"Insider Buy/Sell Ratio", weight:10, unit:"",
+    raw:d=>d.extra.insiderRatio.value, norm:v=>clamp((v-0.1)/0.6*100,0,100) },
+  { key:"smartdumb", label:"Dumb Money Confidence", weight:5, unit:"%",
+    raw:d=>d.extra.smartDumb.dumb, norm:v=>clamp(v,0,100) },
+  { key:"fedcut", label:"Prob. recorte Fed", weight:5, unit:"%",
+    raw:d=>d.extra.fedCut.cut, norm:v=>clamp(v,0,100) }
+];
+
+function computeComposite(d){
+  let total = 0;
+  const rows = COMPOSITE_CONFIG.map(cfg=>{
+    const raw = cfg.raw(d);
+    const score = cfg.norm(raw);
+    total += score * (cfg.weight/100);
+    return { label:cfg.label, raw, score, weight:cfg.weight, unit:cfg.unit };
+  });
+  return { score: clamp(total,0,100), rows };
+}
+
+function compositeZone(v){
+  if(v<20) return {label:"Miedo extremo", color:"#B0432F",
+    verdict:"Zona de capitulación histórica. Contrarian: suele ser terreno de oportunidad, pero con volatilidad muy alta — no es lo mismo que 'zona segura'."};
+  if(v<40) return {label:"Miedo", color:"#C97A3A",
+    verdict:"Cautela generalizada. Puede haber oportunidades selectivas, pero el consenso sigue defensivo."};
+  if(v<60) return {label:"Neutral", color:"#C9A227",
+    verdict:"Sentimiento mixto, sin sesgo dominante. Ni euforia ni pánico — momento de seguir el plan, no el ruido."};
+  if(v<80) return {label:"Codicia", color:"#7C9A5C",
+    verdict:"Optimismo generalizado. El mercado suele subir así, pero conviene vigilar señales de exceso (apalancamiento, FOMO)."};
+  return {label:"Codicia extrema", color:"#3E8272",
+    verdict:"Zona de mayor riesgo de corrección. Históricamente, aquí conviene extremar la prudencia y revisar exposición."};
+}
+
+function drawComposite(){
+  const { score, rows } = computeComposite(DATA);
+  const cx=180, cy=185, r=150, strokeW=18;
+  const zoneColors = ["#B0432F","#C97A3A","#C9A227","#7C9A5C","#3E8272"];
+
+  let svg = "";
+  // zone arcs
+  for(let i=0;i<5;i++){
+    const startDeg = 180 - i*36;
+    const endDeg = 180 - (i+1)*36;
+    svg += `<path d="${arcPath(cx,cy,r,startDeg,endDeg)}" stroke="${zoneColors[i]}" stroke-width="${strokeW}" fill="none" stroke-linecap="butt"/>`;
+  }
+  // tick marks + numeric labels every 20
+  for(let v=0; v<=100; v+=10){
+    const angle = 180 - (v/100)*180;
+    const major = (v % 20 === 0);
+    const p1 = polarPoint(cx,cy, r-strokeW/2-4, angle);
+    const p2 = polarPoint(cx,cy, r-strokeW/2-4-(major?14:7), angle);
+    svg += `<line x1="${p1.x.toFixed(1)}" y1="${p1.y.toFixed(1)}" x2="${p2.x.toFixed(1)}" y2="${p2.y.toFixed(1)}" stroke="#EBE4CF" stroke-width="${major?2:1}" opacity="${major?0.9:0.5}"/>`;
+    if(major){
+      const lp = polarPoint(cx,cy, r-strokeW/2-30, angle);
+      svg += `<text x="${lp.x.toFixed(1)}" y="${(lp.y+4).toFixed(1)}" text-anchor="middle" font-size="12" fill="#9C9880">${v}</text>`;
+    }
+  }
+  // needle
+  const deg = (score-50)*1.8;
+  const needleLen = r - strokeW - 20;
+  svg += `<g transform="rotate(${deg} ${cx} ${cy})">
+    <polygon points="${cx-4},${cy} ${cx+4},${cy} ${cx},${cy-needleLen}" fill="#EBE4CF"/>
+    <polygon points="${cx-4},${cy} ${cx+4},${cy} ${cx},${cy-needleLen*0.35}" fill="#B0432F"/>
+  </g>`;
+  svg += `<circle cx="${cx}" cy="${cy}" r="8" fill="#0E2033" stroke="var(--brass)" stroke-width="2.4"/>`;
+
+  document.getElementById('compositeSvg').innerHTML = svg;
+
+  const zone = compositeZone(score);
+  document.getElementById('compositeValue').textContent = score.toFixed(1);
+  document.getElementById('compositeValue').style.color = zone.color;
+  const lblEl = document.getElementById('compositeLabel');
+  lblEl.textContent = zone.label;
+  lblEl.style.color = zone.color;
+  document.getElementById('compositeVerdict').textContent = zone.verdict;
+
+  document.getElementById('compositeBreakdown').innerHTML = rows.map(row=>{
+    const barColor = zoneColors[Math.min(4, Math.floor(row.score/20))];
+    const rawFmt = (typeof row.raw === 'number') ? row.raw.toFixed(row.unit==="%"||Math.abs(row.raw)>=10 ? 1 : 2) : row.raw;
+    return `
+      <div class="breakdown-row">
+        <span class="breakdown-name">${row.label}</span>
+        <span class="breakdown-weight">${rawFmt}${row.unit} · ${row.weight}%</span>
+        <span class="breakdown-bar-track"><span class="breakdown-bar-fill" style="width:${row.score}%; background:${barColor};"></span></span>
+        <span class="breakdown-score">${row.score.toFixed(0)}</span>
+      </div>`;
+  }).join("");
+}
+
+// ---- Render everything ----
+function render(){
+  drawHeader();
+  drawComposite();
+  drawGauge();
+  drawBars();
+  drawTrend();
+  drawExtended();
+  drawSynthesis();
+}
+
+// ---- Load live data/sentiment.json (written weekly by GitHub Actions) ----
+// Cache-busted so GitHub Pages / browsers don't serve a stale copy.
+fetch('./data/sentiment.json?t=' + Date.now())
+  .then(r => { if(!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+  .then(live => {
+    DATA = deepMerge(DEFAULTS, live);
+    USING_LIVE_DATA = true;
+    render();
+  })
+  .catch(() => {
+    // No server (file:// double-click), archivo aún no generado, o CORS.
+    // Se cae limpiamente en los valores embebidos.
+    DATA = DEFAULTS;
+    USING_LIVE_DATA = false;
+    render();
+  });
+</script>
+</body>
+</html>

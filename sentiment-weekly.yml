@@ -1,0 +1,67 @@
+name: Captura semanal de sentimiento
+
+on:
+  schedule:
+    # Todos los jueves a las 22:00 UTC (tras el cierre de EE.UU. y la
+    # publicación semanal de AAII, que sale los jueves por la tarde ET).
+    - cron: "0 22 * * 4"
+  workflow_dispatch: {}   # permite lanzarlo a mano desde la pestaña Actions
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Instalar dependencias
+        run: pip install -r scripts/requirements.txt
+
+      - name: Ejecutar captura
+        run: python scripts/fetch_sentiment.py
+
+      - name: Commit y push si hay cambios
+        run: |
+          git config user.name "sentiment-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add data/sentiment.json
+          git diff --staged --quiet || git commit -m "chore: captura semanal de sentimiento ($(date -u +%F))"
+          git push
+
+  deploy-pages:
+    needs: fetch
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Checkout (rama actualizada)
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Configurar Pages
+        uses: actions/configure-pages@v5
+
+      - name: Subir artefacto (raíz del repo)
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: "."
+
+      - name: Publicar en GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

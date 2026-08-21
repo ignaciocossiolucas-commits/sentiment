@@ -1,0 +1,57 @@
+{
+  "meta": {
+    "last_run": null,
+    "generated_by": "seed manual (Claude), 2026-08-17"
+  },
+  "fearGreed": {
+    "value": 65,
+    "label": "Codicia",
+    "date": "2026-08-14",
+    "stale": false
+  },
+  "aaii": {
+    "bullish": 34.7,
+    "neutral": 27.4,
+    "bearish": 37.9,
+    "avgBullish": 37.5,
+    "avgNeutral": 31.5,
+    "avgBearish": 31.0,
+    "spread": -3.2,
+    "avgSpread": 6.5,
+    "date": "2026-08-13",
+    "stale": false,
+    "history": [
+      { "date": "02 jul", "spread": -10.9 },
+      { "date": "09 jul", "spread": -0.9 },
+      { "date": "16 jul", "spread": 12.0 },
+      { "date": "23 jul", "spread": -12.7 },
+      { "date": "30 jul", "spread": -11.1 },
+      { "date": "06 ago", "spread": -1.0 },
+      { "date": "13 ago", "spread": -3.2 }
+    ]
+  },
+  "extra": {
+    "vix": { "value": 14.25, "date": "2026-08-17", "source": "Cboe / yfinance", "stale": false },
+    "putCall": { "value": 0.54, "date": "2026-08-07", "source": "CBOE Equity P/C", "stale": false },
+    "naaim": {
+      "value": 79.70, "prev": 84.02, "date": "2026-07-29",
+      "source": "NAAIM Exposure Index", "manual": true, "manual_updated": "2026-08-17"
+    },
+    "insiderRatio": {
+      "value": 0.23, "avg": 0.39, "date": "2026-07-01",
+      "source": "GuruFocus", "manual": true, "manual_updated": "2026-08-17"
+    },
+    "pct200dma": {
+      "value": 56.8, "date": "2026-08-07",
+      "source": "~4.750 acciones EE.UU., thetrading.tools", "stale": false
+    },
+    "smartDumb": {
+      "smart": 30, "dumb": 61, "date": "2026-07-16",
+      "source": "SentimenTrader", "manual": true, "manual_updated": "2026-08-17"
+    },
+    "fedCut": {
+      "cut": 31, "hold": 69, "meetingDate": "2026-09-16",
+      "date": "2026-08-14", "source": "CME FedWatch", "manual": true, "manual_updated": "2026-08-17"
+    }
+  }
+}
